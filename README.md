@@ -91,7 +91,7 @@ gunzip -c ttbar/Events/pilotrun/tag_1_pythia8_events.hepmc.gz | DelphesHepMC del
 
 To analyze results from Delphes:
 ```
-root -l 'emgD.C("signal.root")'
+root -l 'emgD.C("signal")'
 ```
 
 ## Plotting

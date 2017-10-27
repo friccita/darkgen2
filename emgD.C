@@ -18,7 +18,7 @@ R__LOAD_LIBRARY(libDelphes)
 #include "external/ExRootAnalysis/ExRootResult.h"
 #endif
 
-    const float deltaz = 0.01;
+    const float deltaz = 0.01; // units: cm
     int idbg=0;
     float ConeSize=0.4;
     float D0SigCut=3;
@@ -61,9 +61,9 @@ struct MyPlots
     TH1 *Count;
     TH1 *fJetPT;
     TH1 *fJetAM;
-    TH1 *fDarkJetAM;
-    TH1 *fBJetAM;
-    TH1 *fJetAMp;
+    TH1 *fDarkJetA3D;
+    TH1 *fBJetA3D;
+    TH1 *fJetA3D;
     TH1 *fJetD0max;
     TH1 *fJetD0ave;
     TH1 *fJetTHave;
@@ -87,10 +87,12 @@ struct MyPlots
     TH1 *fmuonPT;
     TH1 *fmuonPT_afterkin;
     TH1 *fHT;
+    TH1 *fST;
     TH1 *fdqd0;
     TH1 *fdd0;
 
     TH1 *fhtnm1;
+    TH1 *fstnm1;
     TH1 *fjpt1nm1;
     TH1 *fjpt2nm1;
     TH1 *fjpt3nm1;
@@ -175,19 +177,19 @@ void BookHistograms(ExRootResult *result, MyPlots *plots)
             "alphamax 6 leading jets", "number of jet",
             50, 0.0, 1);
 
-    plots->fDarkJetAM = result->AddHist1D(
-            "darkjet_alphamax", "dark jet alphamax",
-            "alphamax 6 leading jets", "number of jet",
+    plots->fDarkJetA3D = result->AddHist1D(
+            "darkjet_alpha3D", "dark jet alpha3D",
+            "alpha3D 6 leading jets", "number of jet",
             50, 0.0, 1);
 
-    plots->fBJetAM = result->AddHist1D(
-            "bjet_alphamax", "b jet alphamax",
-            "alphamax 6 leading jets", "number of jet",
+    plots->fBJetA3D = result->AddHist1D(
+            "bjet_alpha3D", "b jet alpha3D",
+            "alpha3D 6 leading jets", "number of jet",
             50, 0.0, 1);
 
-    plots->fJetAMp = result->AddHist1D(
-            "jet_alphamaxp", "jet alphamaxp",
-            "alphamaxp 6 leading jets", "number of jet",
+    plots->fJetA3D = result->AddHist1D(
+            "jet_alpha3D", "jet alpha3D",
+            "alpha3D 6 leading jets", "number of jet",
             50, 0.0, 1);
 
     plots->fJetD0max = result->AddHist1D(
@@ -290,8 +292,13 @@ void BookHistograms(ExRootResult *result, MyPlots *plots)
             100, 0.0, 1000.0);
 
     plots->fHT = result->AddHist1D(
-            "HT", "HT",
-            "HT, GeV", "number of events",
+            "H_{T}", "H_{T}",
+            "H_{T}, GeV", "number of events",
+            100, 0.0, 5000.0);
+
+    plots->fST = result->AddHist1D(
+            "S_{T}", "S_{T}",
+            "S_{T}(6 jets), GeV", "number of events",
             100, 0.0, 5000.0);
 
     plots->felectronPT = result->AddHist1D(
@@ -313,6 +320,11 @@ void BookHistograms(ExRootResult *result, MyPlots *plots)
     plots->fhtnm1 = result->AddHist1D(
             "HTnm1", "HTnm1",
             "HT n-1, GeV", "number of events",
+            100, 0.0, 5000.0);
+
+    plots->fstnm1 = result->AddHist1D(
+            "S_{T}nm1", "S_{T}nm1",
+            "S_{T}(6 jets) n-1, GeV", "number of events",
             100, 0.0, 5000.0);
 
     plots->fjpt1nm1 = result->AddHist1D(
@@ -374,6 +386,7 @@ void BookHistograms(ExRootResult *result, MyPlots *plots)
     // show histogram statisics for MissingET
     plots->fMissingET->SetStats();
     plots->fHT->SetStats();
+    plots->fST->SetStats();
     plots->fJetPT->SetStats();
     plots->ftrkPT->SetStats();
     plots->ftrkTH->SetStats();
@@ -381,7 +394,7 @@ void BookHistograms(ExRootResult *result, MyPlots *plots)
     plots->ftrkD0Error->SetStats();
     plots->ftrkD0sig->SetStats();
     plots->fJetAM->SetStats();
-    plots->fJetAMp->SetStats();
+    plots->fJetA3D->SetStats();
     plots->fJetTHave->SetStats();
 
     plots->fBJetPT->SetStats();
@@ -435,6 +448,7 @@ void AnalyseEvents(ExRootTreeReader *treeReader, MyPlots *plots)
     if(idbg>0) ijloop = 10;
     for(entry = 0; entry < ijloop; ++entry)
       { // loop over all entries
+	double st6 = 0.;
         if(idbg>0) myfile<<std::endl;
         if(idbg>0) myfile<<"event "<<entry<<std::endl;
         // Load selected branches with data from specified event
@@ -594,7 +608,7 @@ void AnalyseEvents(ExRootTreeReader *treeReader, MyPlots *plots)
         plots->fnJet->Fill(njet);
 
         vector<float> alphaMax(njet);  // not really alpha max but best we can do here
-        vector<float> alphaMaxp(njet);
+        vector<float> alpha3D(njet);
         vector<float> D0Max(njet);
         vector<float> D0Ave(njet);
         vector<float> THAve(njet);
@@ -609,9 +623,9 @@ void AnalyseEvents(ExRootTreeReader *treeReader, MyPlots *plots)
         vector<bool> adq(njet);
         vector<bool> abq(njet);
         if(idbg>0) myfile<<" number of jets is "<<njet<<std::endl;
-        int nbjets = 0;
 	int nelectrons = 0;
 	int nmuons = 0;
+	int nbjets_all;
         int ndarkjets = 0;
 
         for(int i=0;i<njet;i++) {
@@ -621,8 +635,9 @@ void AnalyseEvents(ExRootTreeReader *treeReader, MyPlots *plots)
             // btag working points are accessed by bit-shifting
             // use 0 for loose, 1 for medium, and 2 for tight
             if (isBJet) {
-                nbjets++;
-                plots->fBJetPT->Fill(jet->PT); }
+                nbjets_all++;
+                //plots->fBJetPT->Fill(jet->PT);
+            }
             abq[i] = isBJet;
 
             if(idbg>0) myfile<<"jet "<<i<<"  with pt, eta, phi of "<<jet->PT<<" "<<jet->Eta<<" "<<jet->Phi<<std::endl;
@@ -659,7 +674,7 @@ void AnalyseEvents(ExRootTreeReader *treeReader, MyPlots *plots)
 
             // calculate track based variables
             alphaMax[i]=1.; // cut on d0sig
-            alphaMaxp[i]=1.; // cut on d0
+            alpha3D[i]=1.; // cut on d0
             goodjet[i]=false;
             D0Max[i]=0.;
             D0Ave[i]=0.;
@@ -699,7 +714,7 @@ void AnalyseEvents(ExRootTreeReader *treeReader, MyPlots *plots)
 		  // if(fabs((trk->D0))<D0Cut) { // if track Dxy < cut
 
 		  double dxy_term = (trk->D0)/(trk->ErrorD0);
-		  double dz_term = (trk->DZ)/deltaz;
+		  double dz_term = (trk->DZ)/(trk->ErrorDZ); //deltaz
 		  double ip3dsig = sqrt((dxy_term)*(dxy_term) + (dz_term)*(dz_term)); // estimate of 3d ip
 		  if(ip3dsig<IP3DSIGCUT) { // if track D0 < cut
 		    cutpTp+=trk->PT;
@@ -719,10 +734,10 @@ void AnalyseEvents(ExRootTreeReader *treeReader, MyPlots *plots)
 	    
             if(allpT>0) {
 	      alphaMax[i]=cutpT/allpT;
-	      alphaMaxp[i]=cutpTp/allpT;
+	      alpha3D[i]=cutpTp/allpT;
             }
             if(alphaMax[i]>0.99999) alphaMax[i]=0.99999;
-            if(alphaMaxp[i]>0.99999) alphaMaxp[i]=0.99999;
+            if(alpha3D[i]>0.99999) alpha3D[i]=0.99999;
 	    
             ntrk1[i]=ntrkj;
             if(ntrkj>0) {
@@ -746,7 +761,7 @@ void AnalyseEvents(ExRootTreeReader *treeReader, MyPlots *plots)
 	    
             if(idbg>0) myfile<<"alpha max is "<<alphaMax[i]<<std::endl;
         } // end loop over all jets
-        plots->fnBJet->Fill(nbjets);
+        plots->fnBJet->Fill(nbjets_all); //number of bjets in event
 	
         // Analyse missing ET
         if(branchMissingET->GetEntriesFast() > 0)
@@ -783,19 +798,27 @@ void AnalyseEvents(ExRootTreeReader *treeReader, MyPlots *plots)
 
 
 
-        //count number of the 6 (used to be 4) leading jets with alpha max < a cut
+        //count number of the 6 leading jets with alpha max < a cut
         int nalpha=0;
 	int nem = 0;
+        int nbjets = 0;
         int iloop=min(6,njet);
         for(int i=0;i<iloop;i++) {
-            plots->fJetAM->Fill(alphaMax[i]);
-            if (adkq[i]) plots->fDarkJetAM->Fill(alphaMax[i]);
-            if (abq[i]) plots->fBJetAM->Fill(alphaMax[i]);
-            plots->fJetAMp->Fill(alphaMaxp[i]);
+            jet = (Jet*) branchJet->At(i);
+	    st6 += jet->PT;
+	    plots->fJetAM->Fill(alphaMax[i]); //historical!!
+            plots->fJetA3D->Fill(alpha3D[i]);
+            if (adkq[i]) plots->fDarkJetA3D->Fill(alpha3D[i]);
+            if (abq[i]) // if this jet is a b jet
+	      {
+		nbjets++;
+		plots->fBJetA3D->Fill(alpha3D[i]);
+                plots->fBJetPT->Fill(jet->PT);
+       	      } // if this jet is a b jet
             plots->fJetD0max->Fill(D0Max[i]);
             plots->fJetD0ave->Fill(D0Ave[i]);
             plots->fJetTHave->Fill(THAve[i]);
-            if(alphaMaxp[i]<ALPHAMAXCUT) { // if alphamax < cut
+            if(alpha3D[i]<ALPHAMAXCUT) { // if alphamax < cut
 	      nalpha+=1;
 	      if(idbg>0) myfile<<" jet "<<i<<" passes alphamax cut with alphamax of "<<alphaMax[i]<<std::endl;
 	      if(D0Med[i]>D0MEDCUT) { // if d0med < cut
@@ -803,6 +826,7 @@ void AnalyseEvents(ExRootTreeReader *treeReader, MyPlots *plots)
 	      } // if d0med > cut
             } // if alphamax < cut
         }
+	plots->fST->Fill(st6);
 
         // do pseudo emerging jets analysis
 
@@ -829,7 +853,7 @@ void AnalyseEvents(ExRootTreeReader *treeReader, MyPlots *plots)
 	if(nbjets>=1) Pnbjet=true;
 	if((nelectrons+nmuons)>=1) Pnlepton=true;
         if(njet>=6) {
-            if((ht->HT)>HTCUT) Pht=true;
+	  if(/*(ht->HT)*/(st6)>HTCUT) Pht=true;
             jet = (Jet*) branchJet->At(0);
             if(((jet->PT)>PT1CUT)&&goodjet[0]) Ppt1=true;
             jet = (Jet*) branchJet->At(1);
@@ -845,6 +869,8 @@ void AnalyseEvents(ExRootTreeReader *treeReader, MyPlots *plots)
             //if(nalpha>1) Pam=true;
             if(nem>1) Pam=true;
         }
+
+	//
 	float elpt = 0;
 	float eleta = 0;
 	float elphi = 0;
@@ -890,10 +916,11 @@ void AnalyseEvents(ExRootTreeReader *treeReader, MyPlots *plots)
 	  jet = (Jet*) branchJet->At(5);
 	  if (DeltaR(jet->Eta,jet->Phi,lepeta,lepphi)>JetLepSepCut) PJetLepSep6 = true;
 	}
+	bool PSep = PJetLepSep1&&PJetLepSep2&&PJetLepSep3&&PJetLepSep4&&PJetLepSep5&&PJetLepSep6;
 
         //n-1 plots
 
-        for(i = 0; i < branchMuon->GetEntriesFast(); ++i)
+        for(i = 0; i < branchMuon->GetEntriesFast(); ++i) // pt of muons after kin cuts
         {
             muon = (Muon*) branchMuon->At(i);
 	    if (Pnjet&&Pht&&Ppt1&&Ppt2&&Ppt3&&Ppt4&&Ppt5&&Ppt6)
@@ -910,59 +937,71 @@ void AnalyseEvents(ExRootTreeReader *treeReader, MyPlots *plots)
 	      }
 	  }
 
-        if(Pnjet&&Ppt1&&Ppt2&&Ppt3&&Ppt4&&Ppt5&&Ppt6/*&&Pam*/) plots->fhtnm1->Fill(ht->HT); // kinematics cuts only!
+        if(Pnjet&&Pnbjet&&Ppt1&&Ppt2&&Ppt3&&Ppt4&&Ppt5&&Ppt6&&Pnlepton&&Pleppt&PSep&&Pam) plots->fhtnm1->Fill(ht->HT);
         jet = (Jet*) branchJet->At(0);
-        if(Pnjet&&Pht&&Ppt2&&Ppt3&&Ppt4&&Ppt5&&Ppt6&&Pam) plots->fjpt1nm1->Fill(jet->PT);
+        if(Pnjet&&Pht&&Pnbjet&&Ppt2&&Ppt3&&Ppt4&&Ppt5&&Ppt6&&Pnlepton&&Pleppt&PSep&&Pam) plots->fjpt1nm1->Fill(jet->PT);
         jet = (Jet*) branchJet->At(1);
-        if(Pnjet&&Pht&&Ppt1&&Ppt3&&Ppt4&&Ppt5&&Ppt6&&Pam) plots->fjpt2nm1->Fill(jet->PT);
+        if(Pnjet&&Pht&&Pnbjet&&Ppt1&&Ppt3&&Ppt4&&Ppt5&&Ppt6&&Pnlepton&&Pleppt&PSep&&Pam) plots->fjpt2nm1->Fill(jet->PT);
         jet = (Jet*) branchJet->At(2);
-        if(Pnjet&&Pht&&Ppt1&&Ppt2&&Ppt4&&Ppt5&&Ppt6&&Pam) plots->fjpt3nm1->Fill(jet->PT);
+        if(Pnjet&&Pht&&Pnbjet&&Ppt1&&Ppt2&&Ppt4&&Ppt5&&Ppt6&&Pnlepton&&Pleppt&PSep&&Pam) plots->fjpt3nm1->Fill(jet->PT);
         jet = (Jet*) branchJet->At(3);
-        if(Pnjet&&Pht&&Ppt1&&Ppt2&&Ppt3&&Ppt5&&Ppt6&&Pam) plots->fjpt4nm1->Fill(jet->PT);
+        if(Pnjet&&Pht&&Pnbjet&&Ppt1&&Ppt2&&Ppt3&&Ppt5&&Ppt6&&Pnlepton&&Pleppt&PSep&&Pam) plots->fjpt4nm1->Fill(jet->PT);
         jet = (Jet*) branchJet->At(4);
-        if(Pnjet&&Pht&&Ppt1&&Ppt2&&Ppt3&&Ppt4&&Ppt6&&Pam) plots->fjpt5nm1->Fill(jet->PT);
+        if(Pnjet&&Pht&&Pnbjet&&Ppt1&&Ppt2&&Ppt3&&Ppt4&&Ppt6&&Pnlepton&&Pleppt&PSep&&Pam) plots->fjpt5nm1->Fill(jet->PT);
         jet = (Jet*) branchJet->At(5);
-        if(Pnjet&&Pht&&Ppt1&&Ppt2&&Ppt3&&Ppt4&&Ppt5&&Pam) plots->fjpt6nm1->Fill(jet->PT);
+        if(Pnjet&&Pht&&Pnbjet&&Ppt1&&Ppt2&&Ppt3&&Ppt4&&Ppt5&&Pnlepton&&Pleppt&PSep&&Pam) plots->fjpt6nm1->Fill(jet->PT);
 
-        if(Pnjet&&Pht&&Ppt1&&Ppt2&&Ppt3&&Ppt4&&Ppt5&&Ppt6) {
-            plots->famnm1->Fill(alphaMaxp[0]);
-            plots->famnm1->Fill(alphaMaxp[1]);
-            plots->famnm1->Fill(alphaMaxp[2]);
-            plots->famnm1->Fill(alphaMaxp[3]);
-            plots->famnm1->Fill(alphaMaxp[4]);
-            plots->famnm1->Fill(alphaMaxp[5]);
+        if(Pnjet&&Pht&&Pnbjet&&Ppt1&&Ppt2&&Ppt3&&Ppt4&&Ppt5&&Ppt6&&Pnlepton&&Pleppt&&PSep) {
+            plots->famnm1->Fill(alpha3D[0]);
+            plots->famnm1->Fill(alpha3D[1]);
+            plots->famnm1->Fill(alpha3D[2]);
+            plots->famnm1->Fill(alpha3D[3]);
+            plots->famnm1->Fill(alpha3D[4]);
+            plots->famnm1->Fill(alpha3D[5]);
         }
 
 
 
         plots->Count->Fill("All",1);
         if(Pnjet) {
-            plots->Count->Fill("6 jets",1);
-            if(Pht) {
-                plots->Count->Fill("HT",1);
-                if(Ppt1) {
-                    plots->Count->Fill("PT1CUT",1);
-                    if(Ppt2) {
-                        plots->Count->Fill("PT2CUT",1);
-                        if(Ppt3) {
-                            plots->Count->Fill("PT3CUT",1);
-                            if(Ppt4) {
-                                plots->Count->Fill("PT4CUT",1);
-				if(Ppt5) {
-				  plots->Count->Fill("PT5CUT",1);
-				  if(Ppt6) {
-				    plots->Count->Fill("PT6CUT",1);
-				    if(Pam) {
-				      plots->Count->Fill("AM",1);
-				      if(idbg>0) myfile<<" event passes all cuts"<<std::endl;
-				    } //if Pam
-				  }//if Ppt6
-				}//if Ppt5
-                            } //if Ppt4
-			} //if Ppt3
-		    } //if Ppt2
-		} //if Ppt1
-            } //if Pht
+	  plots->Count->Fill("6 jets",1);
+	  if(Pht) {
+	    plots->Count->Fill("HT",1);
+	    if(Pnbjet) {
+	      plots->Count->Fill("B jet",1);
+	      if(Ppt1) {
+		plots->Count->Fill("PT1CUT",1);
+		if(Ppt2) {
+		  plots->Count->Fill("PT2CUT",1);
+		  if(Ppt3) {
+		    plots->Count->Fill("PT3CUT",1);
+		    if(Ppt4) {
+		      plots->Count->Fill("PT4CUT",1);
+		      if(Ppt5) {
+			plots->Count->Fill("PT5CUT",1);
+			if(Ppt6) {
+			  plots->Count->Fill("PT6CUT",1);
+			  if(Pnlepton) {
+			    plots->Count->Fill("Lepton",1);
+			    if(Pleppt) {
+			      plots->Count->Fill("Lepton pT", 1);
+			      if(PSep) {
+				plots->Count->Fill("Lepton sep", 1);
+				if(Pam) {
+				  plots->Count->Fill("AM",1);
+				  if(idbg>0) myfile<<" event passes all cuts"<<std::endl;
+				} //if Pam
+			      } //if PSep
+			    } //if Pleppt
+			  }//if Pnlepton
+			}//if Ppt6
+		      }//if Ppt5
+		    } //if Ppt4
+		  } //if Ppt3
+		} //if Ppt2
+	      } //if Ppt1
+	    }//if Pnbjet
+	  } //if Pht
         } //if Pnjet
        
 
