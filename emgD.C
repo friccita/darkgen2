@@ -292,12 +292,12 @@ void BookHistograms(ExRootResult *result, MyPlots *plots)
             100, 0.0, 1000.0);
 
     plots->fHT = result->AddHist1D(
-            "H_{T}", "H_{T}",
+            "HT", "HT",
             "H_{T}, GeV", "number of events",
             100, 0.0, 5000.0);
 
     plots->fST = result->AddHist1D(
-            "S_{T}", "S_{T}",
+            "ST", "ST",
             "S_{T}(6 jets), GeV", "number of events",
             100, 0.0, 5000.0);
 
@@ -323,7 +323,7 @@ void BookHistograms(ExRootResult *result, MyPlots *plots)
             100, 0.0, 5000.0);
 
     plots->fstnm1 = result->AddHist1D(
-            "S_{T}nm1", "S_{T}nm1",
+            "STnm1", "STnm1",
             "S_{T}(6 jets) n-1, GeV", "number of events",
             100, 0.0, 5000.0);
 
@@ -1044,7 +1044,7 @@ void emgD(const string inputName)
     plots->Count->LabelsDeflate();
     plots->Count->LabelsOption("v");
 
-    PrintHistograms(result, plots);
+    //PrintHistograms(result, plots);
 
     string outfilename = "results_" + infilename;
     cout << "Output file: " << outfilename << endl;
