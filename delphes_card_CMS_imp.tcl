@@ -14,7 +14,7 @@ set ExecutionPath {
   MuonMomentumSmearing
 
   TrackMerger
-  ImpactParameterSmearing
+  TrackSmearing
  
   ECal
   HCal
@@ -49,6 +49,7 @@ set ExecutionPath {
 
   JetFlavorAssociation
 
+  TrackCountingBTagging
   BTagging
   TauTagging
 
@@ -210,14 +211,16 @@ module Merger TrackMerger {
 # Track impact parameter smearing                                                                   
 ################################                                                                    
 
-module ImpactParameterSmearing ImpactParameterSmearing {
+module TrackSmearing TrackSmearing {
   set InputArray TrackMerger/tracks
+#  set BeamSpotInputArray BeamSpotFilter/beamSpotParticle
   set OutputArray tracks
+#  set ApplyToPileUp true
 
+  # magnetic field
+  set Bz 3.8
 
-# absolute impact parameter smearing formula (in mm) as a function of pt and eta                    
-    set ResolutionFormula {0.016 + 0.16/pt}
-
+  source trackResolution.tcl
 }
 
 
@@ -228,7 +231,7 @@ module ImpactParameterSmearing ImpactParameterSmearing {
 
 module SimpleCalorimeter ECal {
   set ParticleInputArray ParticlePropagator/stableParticles
-  set TrackInputArray ImpactParameterSmearing/tracks
+  set TrackInputArray TrackSmearing/tracks
 
   set TowerOutputArray ecalTowers
   set EFlowTrackOutputArray eflowTracks
@@ -744,6 +747,34 @@ module JetFlavorAssociation JetFlavorAssociation {
 
 }
 
+############################
+# b-tagging (track counting)
+############################
+
+module TrackCountingBTagging TrackCountingBTagging {
+  set JetInputArray JetEnergyScale/jets
+  set TrackInputArray HCal/eflowTracks
+
+  set BitNumber 0
+
+  # maximum distance between jet and track
+  set DeltaR 0.3
+
+  # minimum pt of tracks
+  set TrackPTMin 1.0
+
+  # maximum transverse impact parameter (in mm)
+  set TrackIPMax 2.0
+
+  # minimum ip significance for the track to be counted
+  set SigMin 2.0
+
+  # minimum number of tracks (high efficiency n=2, high purity n=3)
+  set Ntracks 3
+
+  set Use3D true
+}
+
 ###########
 # b-tagging
 ###########
@@ -751,7 +782,7 @@ module JetFlavorAssociation JetFlavorAssociation {
 module BTagging BTagging {
   set JetInputArray JetEnergyScale/jets
 
-  set BitNumber 0
+  set BitNumber 1
 
   # add EfficiencyFormula {abs(PDG code)} {efficiency formula as a function of eta and pt}
   # PDG code = the highest PDG code of a quark or gluon inside DeltaR cone around jet axis
@@ -777,6 +808,8 @@ module TauTagging TauTagging {
   set ParticleInputArray Delphes/allParticles
   set PartonInputArray Delphes/partons
   set JetInputArray JetEnergyScale/jets
+
+  set BitNumber 0
 
   set DeltaR 0.5
 
@@ -818,7 +851,7 @@ module TreeWriter TreeWriter {
   add Branch Delphes/allParticles Particle GenParticle
   add Branch NeutrinoKeeper/invisibleParticles InvisibleParticles GenParticle
 
-  add Branch ImpactParameterSmearing/tracks Track Track
+  add Branch TrackSmearing/tracks Track Track
   add Branch Calorimeter/towers Tower Tower
 
   add Branch HCal/eflowTracks EFlowTrack Track
