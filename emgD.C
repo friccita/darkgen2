@@ -704,7 +704,7 @@ void AnalyseEvents(ExRootTreeReader *treeReader, MyPlots *plots)
 		  float dxy_term = (trk->D0)/(trk->ErrorD0);
 		  float dz_term = (trk->DZ)/(trk->ErrorDZ); //deltaz
 		  float ip3dsig = sqrt((dxy_term)*(dxy_term) + (dz_term)*(dz_term)); // estimate of 3d ip
-		  if(ip3dsig<2) { // if track D0 < cut
+		  if(ip3dsig<IP3DSIGCUT) { // if track D0 < cut
 		    cutpTp+=(trk->PT);
 		  } // if track D0 < cut
 		  if(i<6) { // first 6 jets, used to be 4
