@@ -26,7 +26,7 @@ R__LOAD_LIBRARY(libDelphes)
     float LepPtCut = 21;
     float LepEtaCut = 2.4;
     float D0MEDCUT=0.05;
-    float IP3DSIGCUT=8;
+    float IP3DSIGCUT=2;
     float HTCUT = 1000.;
     float JETPTCUT = 30.;
     float JetLepSepCut = 0.4;
@@ -68,7 +68,6 @@ struct MyPlots
     TH1 *fJetD0ave;
     TH1 *fJetTHave;
     TH1 *fnJet;
-    TH1 *fnJet_afterkin;
     TH1 *fFatJetPT;
     TH1 *fFatJetTau21;
     TH1 *fFatJetTau32;
@@ -82,10 +81,9 @@ struct MyPlots
     TH1 *ftrkD0Error;
     TH1 *ftrkD0sig;
     TH1 *fMissingET;
-    TH1 *fMissingET_afterkin;
+    TH1 *fMissingETnm1;
     TH1 *felectronPT;
     TH1 *fmuonPT;
-    TH1 *fmuonPT_afterkin;
     TH1 *fHT;
     TH1 *fST;
     TH1 *fdqd0;
@@ -162,11 +160,6 @@ void BookHistograms(ExRootResult *result, MyPlots *plots)
             "number of jets", "number of events",
             50, 0.0, 50.0);
 
-    plots->fnJet_afterkin = result->AddHist1D(
-            "nJet_afterkin", "number of jets",
-            "number of jets", "number of events",
-            50, 0.0, 50.0);
-
     plots->fJetPT = result->AddHist1D(
             "jet_pt", "jet P_{T}",
             "jet P_{T}, GeV/c", "number of jet",
@@ -175,22 +168,22 @@ void BookHistograms(ExRootResult *result, MyPlots *plots)
     plots->fJetAM = result->AddHist1D(
             "jet_alphamax", "jet alphamax",
             "alphamax 6 leading jets", "number of jet",
-            50, 0.0, 1);
+            100, 0.0, 1);
 
     plots->fDarkJetA3D = result->AddHist1D(
             "darkjet_alpha3D", "dark jet alpha3D",
             "alpha3D 6 leading jets", "number of jet",
-            50, 0.0, 1);
+            100, 0.0, 1);
 
     plots->fBJetA3D = result->AddHist1D(
             "bjet_alpha3D", "b jet alpha3D",
             "alpha3D 6 leading jets", "number of jet",
-            50, 0.0, 1);
+            100, 0.0, 1);
 
     plots->fJetA3D = result->AddHist1D(
             "jet_alpha3D", "jet alpha3D",
             "alpha3D 6 leading jets", "number of jet",
-            50, 0.0, 1);
+            100, 0.0, 1);
 
     plots->fJetD0max = result->AddHist1D(
             "jet_D0max", "jet d0 max",
@@ -286,8 +279,8 @@ void BookHistograms(ExRootResult *result, MyPlots *plots)
             "Missing E_{T}, GeV", "number of events",
             100, 0.0, 1000.0);
 
-    plots->fMissingET_afterkin = result->AddHist1D(
-            "missing_et_afterkin", "Missing E_{T}",
+    plots->fMissingETnm1 = result->AddHist1D(
+            "missing_et_nm1", "Missing E_{T}",
             "Missing E_{T}, GeV", "number of events",
             100, 0.0, 1000.0);
 
@@ -308,11 +301,6 @@ void BookHistograms(ExRootResult *result, MyPlots *plots)
 
     plots->fmuonPT = result->AddHist1D(
             "muonPT", "muonPT",
-            "muon PT, GeV", "number of events",
-            100, 0.0, 500.0);
-
-    plots->fmuonPT_afterkin = result->AddHist1D(
-            "muonPT_afterkin", "muonPT_afterkin",
             "muon PT, GeV", "number of events",
             100, 0.0, 500.0);
 
@@ -360,7 +348,7 @@ void BookHistograms(ExRootResult *result, MyPlots *plots)
     plots->famnm1 = result->AddHist1D(
             "jetalphamaxnm1", "jet alphamax nm1",
             "alphamax n-1 6 leading jets", "number of jet",
-            50, 0.0, 1);
+            100, 0.0, 1);
 
 
     // cut flow
@@ -673,8 +661,8 @@ void AnalyseEvents(ExRootTreeReader *treeReader, MyPlots *plots)
             }
 
             // calculate track based variables
-            alphaMax[i]=1.; // cut on d0sig
-            alpha3D[i]=1.; // cut on d0
+            alphaMax[i]=-1.; // cut on d0sig
+            alpha3D[i]=-1.; // cut on d0
             goodjet[i]=false;
             D0Max[i]=0.;
             D0Ave[i]=0.;
@@ -684,7 +672,7 @@ void AnalyseEvents(ExRootTreeReader *treeReader, MyPlots *plots)
             THAve[i]=0.;
             allpT=0.;
             cutpT=0;
-            cutpTp=0;
+            cutpTp=0.;
 	    ptmaxtrk=0.;
             ntrkj=0;
 
@@ -713,11 +701,11 @@ void AnalyseEvents(ExRootTreeReader *treeReader, MyPlots *plots)
 		  } // if |track D0 error| > 0
 		  // if(fabs((trk->D0))<D0Cut) { // if track Dxy < cut
 
-		  double dxy_term = (trk->D0)/(trk->ErrorD0);
-		  double dz_term = (trk->DZ)/(trk->ErrorDZ); //deltaz
-		  double ip3dsig = sqrt((dxy_term)*(dxy_term) + (dz_term)*(dz_term)); // estimate of 3d ip
-		  if(ip3dsig<IP3DSIGCUT) { // if track D0 < cut
-		    cutpTp+=trk->PT;
+		  float dxy_term = (trk->D0)/(trk->ErrorD0);
+		  float dz_term = (trk->DZ)/(trk->ErrorDZ); //deltaz
+		  float ip3dsig = sqrt((dxy_term)*(dxy_term) + (dz_term)*(dz_term)); // estimate of 3d ip
+		  if(ip3dsig<2) { // if track D0 < cut
+		    cutpTp+=(trk->PT);
 		  } // if track D0 < cut
 		  if(i<6) { // first 6 jets, used to be 4
 		    if(idbg>3) myfile<<"   contains track "<<j<<" with pt, eta, phi of "<<trk->PT<<" "<<trk->Eta<<" "<<trk->Phi<<" d0 of "<<trk->D0<<
@@ -736,8 +724,10 @@ void AnalyseEvents(ExRootTreeReader *treeReader, MyPlots *plots)
 	      alphaMax[i]=cutpT/allpT;
 	      alpha3D[i]=cutpTp/allpT;
             }
+
             if(alphaMax[i]>0.99999) alphaMax[i]=0.99999;
             if(alpha3D[i]>0.99999) alpha3D[i]=0.99999;
+	      
 	    
             ntrk1[i]=ntrkj;
             if(ntrkj>0) {
@@ -920,24 +910,18 @@ void AnalyseEvents(ExRootTreeReader *treeReader, MyPlots *plots)
 
         //n-1 plots
 
-        for(i = 0; i < branchMuon->GetEntriesFast(); ++i) // pt of muons after kin cuts
-        {
-            muon = (Muon*) branchMuon->At(i);
-	    if (Pnjet&&Pht&&Ppt1&&Ppt2&&Ppt3&&Ppt4&&Ppt5&&Ppt6)
-	      plots->fmuonPT_afterkin->Fill(muon->PT);
-        }
+        if(Pnjet&&Pnbjet&&Ppt1&&Ppt2&&Ppt3&&Ppt4&&Ppt5&&Ppt6&&Pnlepton&&Pleppt&PSep) {
+	  if(branchMissingET->GetEntriesFast() > 0)
+	    {
+	      met = (MissingET*) branchMissingET->At(0);
+	      plots->fMissingETnm1->Fill(met->MET);
+	    }
+	}
 
-	if (Pht&&Ppt1&&Ppt2&&Ppt3&&Ppt4&&Ppt5&&Ppt6)
-	  {
-	    plots->fnJet_afterkin->Fill(njet);
-	    if(branchMissingET->GetEntriesFast() > 0)
-	      {
-		met = (MissingET*) branchMissingET->At(0);
-		plots->fMissingET_afterkin->Fill(met->MET);
-	      }
-	  }
-
-        if(Pnjet&&Pnbjet&&Ppt1&&Ppt2&&Ppt3&&Ppt4&&Ppt5&&Ppt6&&Pnlepton&&Pleppt&PSep&&Pam) plots->fhtnm1->Fill(ht->HT);
+        if(Pnjet&&Pnbjet&&Ppt1&&Ppt2&&Ppt3&&Ppt4&&Ppt5&&Ppt6&&Pnlepton&&Pleppt&PSep) {
+	  plots->fhtnm1->Fill(ht->HT);
+	  plots->fstnm1->Fill(st6);
+	}
         jet = (Jet*) branchJet->At(0);
         if(Pnjet&&Pht&&Pnbjet&&Ppt2&&Ppt3&&Ppt4&&Ppt5&&Ppt6&&Pnlepton&&Pleppt&PSep&&Pam) plots->fjpt1nm1->Fill(jet->PT);
         jet = (Jet*) branchJet->At(1);

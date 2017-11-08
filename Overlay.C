@@ -9,7 +9,7 @@ void Overlay(TString histoname, bool dolog)
   int scaletoxs = 0;
   float ttbarxs = 888000.; // in fb
   float darkxs = 18.45402; // in fb
-  float lumi = 100.; // fb^-1
+  float lumi = 300.; // fb^-1
   TFile *f1 = new TFile("results_signal.root");
   TFile *f2 = new TFile("results_ttbar.root");  
   
@@ -84,7 +84,7 @@ void Overlay(TString histoname, bool dolog)
   std::cout<<"getting first"<<std::endl;
   TH1F *A_pt = static_cast<TH1F*>(f1->Get(hname)->Clone());
   A_pt->SetDirectory(0);
-  double aaA = A_pt->Integral();
+  double aaA = A_pt->Integral(); //A_pt->GetBinContent(1)
   std::cout<<" first entries is "<<aaA<<std::endl;
   if (scaletoxs) {
     std::cout << "scaling to xs" << std::endl;
@@ -97,7 +97,7 @@ void Overlay(TString histoname, bool dolog)
   TH1F *B_pt = static_cast<TH1F*>(f2->Get(hname)->Clone());
   B_pt->SetDirectory(0);
   //  B_pt->Rebin(25);
-  double aaB = B_pt->Integral();
+  double aaB = B_pt->Integral(); //B_pt->GetBinContent(1)
   std::cout<<" second entries is "<<aaB<<std::endl;
   if (scaletoxs) {
     std::cout << "scaling to xs" << std::endl;
@@ -105,6 +105,21 @@ void Overlay(TString histoname, bool dolog)
   else { B_pt->Scale(1./aaB);}
   
   
+  //print bin contents
+    
+  /*  cout << "Signal histogram counts" << endl;
+  
+  for (int i = 1; i < 15; i++)
+    {
+      cout << "Bin " << i << ": " << A_pt->GetBinContent(i) << endl;
+    }
+  cout << "Background histogram counts" << endl;
+  for (int i = 1; i < 15; i++)
+    {
+      cout << "Bin " << i << ": " << B_pt->GetBinContent(i) << endl;
+    }
+*/ 
+
   float max = std::max(A_pt->GetMaximum(),B_pt->GetMaximum());
   A_pt->SetMaximum(max*1.3);
   
